@@ -1,6 +1,8 @@
 name: dbt Slim CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
 
@@ -20,11 +22,24 @@ jobs:
       - name: Install dependencies
         run: pip install dbt-core==1.11.7 dbt-duckdb==1.10.1
 
-      - name: dbt deps
-        working-directory: dbt_fintech
-        run: dbt deps
-        env:
-          DBT_PROFILES_DIR: .
+      - name: Créer profiles.yml pour CI
+        run: |
+          cat > dbt_fintech/profiles.yml << 'EOF'
+          dbt_fintech:
+            target: ci
+            outputs:
+              ci:
+                type: duckdb
+                path: ':memory:'
+                threads: 1
+          EOF
+
+      - name: Télécharger le manifest de référence (si existant)
+        uses: actions/download-artifact@v4
+        with:
+          name: dbt-manifest
+          path: dbt_fintech/prod-manifest/
+        continue-on-error: true  # Premier run : pas encore de manifest
 
       - name: dbt seed
         working-directory: dbt_fintech
@@ -32,12 +47,26 @@ jobs:
         env:
           DBT_PROFILES_DIR: .
 
-      - name: dbt build slim (modifiés + dépendants)
+      - name: dbt build slim (si manifest dispo) ou full (premier run)
         working-directory: dbt_fintech
         run: |
-          dbt build \
-            --select state:modified+ \
-            --defer \
-            --state ./target
+          if [ -f prod-manifest/manifest.json ]; then
+            echo "Manifest trouvé — run slim CI"
+            dbt build \
+              --select state:modified+ \
+              --defer \
+              --state prod-manifest/
+          else
+            echo "Pas de manifest — run complet (premier run)"
+            dbt build
+          fi
         env:
           DBT_PROFILES_DIR: .
+
+      - name: Uploader le manifest pour le prochain run
+        uses: actions/upload-artifact@v4
+        if: success()
+        with:
+          name: dbt-manifest
+          path: dbt_fintech/target/manifest.json
+          retention-days: 30
