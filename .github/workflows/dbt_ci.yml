@@ -1,0 +1,43 @@
+name: dbt Slim CI
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  dbt-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install dbt-core==1.11.7 dbt-duckdb==1.10.1
+
+      - name: dbt deps
+        working-directory: dbt_fintech
+        run: dbt deps
+        env:
+          DBT_PROFILES_DIR: .
+
+      - name: dbt seed
+        working-directory: dbt_fintech
+        run: dbt seed
+        env:
+          DBT_PROFILES_DIR: .
+
+      - name: dbt build slim (modifiés + dépendants)
+        working-directory: dbt_fintech
+        run: |
+          dbt build \
+            --select state:modified+ \
+            --defer \
+            --state ./target
+        env:
+          DBT_PROFILES_DIR: .

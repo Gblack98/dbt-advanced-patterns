@@ -1,0 +1,80 @@
+version: 2
+
+models:
+  - name: mart_loan_summary
+    group: marts
+    access: public
+    config:
+      contract:
+        enforced: true
+    tests:
+      - not_empty
+    columns:
+      - name: region
+        data_type: varchar
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['south', 'North', 'central', 'North-East']
+      - name: year
+        data_type: integer
+        constraints:
+          - type: not_null
+      - name: total_loans
+        data_type: bigint
+      - name: avg_loan_amount
+        data_type: double
+      - name: total_defaults
+        data_type: hugeint
+      - name: default_rate_pct
+        data_type: double
+        tests:
+          - not_null
+
+  - name: mart_risk_profile
+    group: marts
+    access: public
+    config:
+      contract:
+        enforced: true
+      on_schema_change: 'fail'
+    tests:
+      - not_empty
+    columns:
+      - name: credit_score_bucket
+        data_type: varchar
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: ['Mauvais', 'Passable', 'Bon', 'Très bon', 'Excellent']
+      - name: total_loans
+        data_type: bigint
+      - name: avg_loan_amount
+        data_type: double
+      - name: default_rate_pct
+        data_type: double
+
+unit_tests:
+  - name: test_credit_score_bucketing
+    model: mart_risk_profile
+    given:
+      - input: ref('stg_loans')
+        rows:
+          - {loan_id: 1, credit_score_num: 550, loan_amount_num: 100000, is_default_num: 1}
+          - {loan_id: 2, credit_score_num: 620, loan_amount_num: 200000, is_default_num: 0}
+          - {loan_id: 3, credit_score_num: 700, loan_amount_num: 150000, is_default_num: 0}
+          - {loan_id: 4, credit_score_num: 760, loan_amount_num: 300000, is_default_num: 1}
+          - {loan_id: 5, credit_score_num: 820, loan_amount_num: 250000, is_default_num: 0}
+    expect:
+      rows:
+        - {credit_score_bucket: 'Mauvais',  total_loans: 1}
+        - {credit_score_bucket: 'Passable', total_loans: 1}
+        - {credit_score_bucket: 'Bon',      total_loans: 1}
+        - {credit_score_bucket: 'Très bon', total_loans: 1}
+        - {credit_score_bucket: 'Excellent', total_loans: 1}

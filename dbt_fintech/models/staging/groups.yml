@@ -1,0 +1,10 @@
+version: 2
+
+groups:
+  - name: staging
+    owner:
+      email: gabardiop1@outlook.com
+
+  - name: marts
+    owner:
+      email: gabardiop1@outlook.com

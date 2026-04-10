@@ -1,0 +1,7 @@
+version: 2
+
+models:
+  - name: stg_loans
+    group: staging
+    access: protected
+    description: "Staging layer — données brutes nettoyées"

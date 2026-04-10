@@ -1,0 +1,27 @@
+version: 2
+
+exposures:
+  - name: loan_risk_dashboard
+    type: dashboard
+    maturity: medium
+    owner:
+      name: Gblack98
+      email: gblack98@example.com
+    description: >
+      Dashboard de suivi du risque crédit par région et score.
+      Consomme mart_loan_summary et mart_risk_profile.
+    depends_on:
+      - ref('mart_loan_summary')
+      - ref('mart_risk_profile')
+
+  - name: risk_ml_model
+    type: ml
+    maturity: low
+    owner:
+      name: Gblack98
+      email: gblack98@example.com
+    description: >
+      Modèle ML de prédiction de défaut.
+      Consomme mart_risk_profile comme feature store.
+    depends_on:
+      - ref('mart_risk_profile')
