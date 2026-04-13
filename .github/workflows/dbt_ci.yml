@@ -20,19 +20,20 @@ jobs:
           python-version: '3.12'
 
       - name: Install dependencies
-        run: pip install dbt-core==1.11.7 dbt-duckdb==1.10.1
+        run: pip install dbt-core==1.9.9 dbt-duckdb==1.9.6
 
       - name: Créer profiles.yml pour CI
         run: |
+          mkdir -p dbt_fintech
           cat > dbt_fintech/profiles.yml << 'EOF'
-          dbt_fintech:
-            target: ci
-            outputs:
-              ci:
-                type: duckdb
-                path: ':memory:'
-                threads: 1
-          EOF
+dbt_fintech:
+  target: ci
+  outputs:
+    ci:
+      type: duckdb
+      path: ':memory:'
+      threads: 1
+EOF
 
       - name: Télécharger le manifest de référence (si existant)
         uses: actions/download-artifact@v4
