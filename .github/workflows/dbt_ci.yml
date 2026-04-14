@@ -24,17 +24,18 @@ jobs:
         run: pip install dbt-core==1.9.9 dbt-duckdb==1.9.6
 
       - name: Créer profiles.yml pour CI
+        env:
+          PROFILES_CONTENT: |
+            dbt_fintech:
+              target: ci
+              outputs:
+                ci:
+                  type: duckdb
+                  path: ':memory:'
+                  threads: 1
         run: |
           mkdir -p dbt_fintech
-          cat > dbt_fintech/profiles.yml << 'EOF'
-dbt_fintech:
-  target: ci
-  outputs:
-    ci:
-      type: duckdb
-      path: ':memory:'
-      threads: 1
-EOF
+          echo "$PROFILES_CONTENT" > dbt_fintech/profiles.yml
 
       - name: Télécharger le manifest de référence (si existant)
         uses: actions/download-artifact@v4
