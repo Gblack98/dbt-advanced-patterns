@@ -1,4 +1,4 @@
-name: dbt Slim CI
+name: dbt CI + Docs
 
 on:
   push:
@@ -7,9 +7,17 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
 jobs:
   dbt-ci:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout code
@@ -31,7 +39,7 @@ jobs:
               outputs:
                 ci:
                   type: duckdb
-                  path: ':memory:'
+                  path: 'ci.duckdb'
                   threads: 1
         run: |
           mkdir -p dbt_fintech
@@ -42,7 +50,7 @@ jobs:
         with:
           name: dbt-manifest
           path: dbt_fintech/prod-manifest/
-        continue-on-error: true  # Premier run : pas encore de manifest
+        continue-on-error: true
 
       - name: dbt seed
         working-directory: dbt_fintech
@@ -50,7 +58,7 @@ jobs:
         env:
           DBT_PROFILES_DIR: .
 
-      - name: dbt build slim (si manifest dispo) ou full (premier run)
+      - name: dbt build
         working-directory: dbt_fintech
         run: |
           if [ -f prod-manifest/manifest.json ]; then
@@ -66,6 +74,12 @@ jobs:
         env:
           DBT_PROFILES_DIR: .
 
+      - name: dbt docs generate
+        working-directory: dbt_fintech
+        run: dbt docs generate
+        env:
+          DBT_PROFILES_DIR: .
+
       - name: Uploader le manifest pour le prochain run
         uses: actions/upload-artifact@v4
         if: success()
@@ -73,3 +87,18 @@ jobs:
           name: dbt-manifest
           path: dbt_fintech/target/manifest.json
           retention-days: 30
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        if: github.ref == 'refs/heads/main'
+
+      - name: Upload docs to Pages
+        uses: actions/upload-pages-artifact@v3
+        if: github.ref == 'refs/heads/main'
+        with:
+          path: dbt_fintech/target/
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        if: github.ref == 'refs/heads/main'
